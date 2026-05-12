@@ -1,6 +1,6 @@
 # 💧 Sanova Analytics - Gestão Comercial e Mitigação de Perdas
 
-**🔗 [Acesse o Dashboard Interativo Aqui](https://seu-app-saneamento.streamlit.app)** *(Substitua por seu link do Streamlit após o deploy)*
+**🔗 [Acesse o Dashboard Interativo Aqui](https://sanovaanalytics-gfmappnrr9.streamlit.app/)** 
 
 ---
 
