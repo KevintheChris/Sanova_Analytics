@@ -1,45 +1,46 @@
 # 💧 Sanova Analytics - Gestão Comercial e Mitigação de Perdas
 
-**🔗 [Acesse o Dashboard Interativo Aqui](https://sanovaanalytics-gfmappnrr9.streamlit.app/)** 
+**🔗 [Acesse o Dashboard Interativo Aqui](https://seu-app-saneamento.streamlit.app)** 
 
 ---
 
-### 📖 O Desafio & A Abordagem Estratégica (Storytelling)
-Para resolver este estudo de caso de micromedição, decidi ir além das ferramentas tradicionais de relatórios corporativos (como o Power BI). Desenvolvi uma aplicação interativa e escalável estruturada inteiramente em **Python, Pandas e Streamlit**. 
-
-O objetivo dessa escolha arquitetural reflete o direcionamento da nova fase do mercado de dados:
-1. **Flexibilidade e Além do BI Tradicional:** Enquanto ferramentas de BI possuem limitações em customizações complexas e licenciamento, a stack em Python proporciona flexibilidade total para tratamento de dados, automação e escalabilidade.
-2. **Integração Nativa com Inteligência Artificial:** Ao estruturar os dados e o dashboard em Python, o terreno fica imediatamente preparado para acoplar modelos preditivos de Machine Learning (para prever evasão ou fraudes em tempo real) e integrações com Agentes de IA (GenAI) para consulta de dados em linguagem natural. Essa transição seria engessada e dependente de plugins em um sistema BI fechado.
-
-Ao analisar a base de dados, meu foco foi muito além da visualização: busquei identificar os gargalos operacionais que geram perdas aparentes e transformá-los em oportunidades financeiras reais. O dashboard foi construído para entregar **decisões**, saindo de dados brutos diretamente para Planos de Ação otimizados.
+## 🎯 Resumo Executivo
+Este projeto é uma solução analítica focada em **resultados operacionais e aumento de receita** para o setor de saneamento. Indo além da simples visualização de dados, a aplicação identifica ativamente gargalos comerciais, cruza inconsistências de faturamento e gera um **Plano de Ação priorizado por Payback**, indicando exatamente onde a concessionária deve alocar suas equipes de campo para obter o retorno financeiro mais rápido.
 
 ---
 
-## 🎯 Objetivos da Análise
-O dashboard tem como foco responder aos seguintes pontos do case:
-1. **Identificação de oportunidades de recuperação de receitas**: Cálculo do impacto financeiro de clientes que não estão sendo cobrados adequadamente.
-2. **Detecção de possíveis fraudes, inconsistências ou anomalias**: Regras aplicadas para descobrir "gatos", hidrômetros parados ou cadastros incorretos.
-3. **Visibilidade Operacional**: Análise completa do parque de hidrômetros e tendências históricas de consumo.
-4. **Priorização de ações**: Geração de um Plano de Ação ordenado pelo tempo de retorno financeiro (Payback).
+## 📖 O Desafio & A Abordagem Estratégica
+O escopo do desafio sugeria o uso de ferramentas tradicionais de BI (como o Power BI). No entanto, para resolver este estudo de caso de micromedição com foco no futuro da operação, decidi arquitetar uma aplicação interativa e escalável estruturada inteiramente em **Python, Pandas e Streamlit**. 
 
-## 📊 Regras de Negócio de Anomalias Implementadas
+Esta decisão técnica reflete uma decisão de negócios:
+1. **Flexibilidade Analítica:** Ferramentas de BI tradicionais são excelentes para relatórios consolidados, mas possuem limites de customização e licenciamento. O ecossistema Python oferece flexibilidade total para manipulação de dados em larga escala e redução do tempo de análise operacional.
+2. **Arquitetura Pronta para IA e Machine Learning:** Ao estruturar o *pipeline* e o dashboard em Python, o ecossistema abandona o formato engessado de relatórios estáticos e se torna um ambiente dinâmico. O terreno já está nativamente preparado para integrar modelos preditivos (como detecção de fraudes em tempo real via Machine Learning) ou Agentes de IA (LLMs) para consultas operacionais diretas. 
+
+O objetivo primário desta análise não é apenas plotar gráficos, mas sim transformar dados brutos em **decisões estratégicas e métricas de impacto financeiro**.
+
+---
+
+## 📊 Regras de Negócio e Detecção de Anomalias
+Para garantir a recuperação de receitas e a mitigação de perdas, os dados foram submetidos a regras de negócio rigorosas para identificar:
+
 1. **Hidrômetro Parado**: Ligação ATIVA que possui Volume Lido igual a 0.
 2. **Possível Clandestina ("Gato")**: Ligação INATIVA/CORTADA que ainda assim registra Volume Lido maior que 0.
-3. **Anomalia de Categoria**: Ligações com categoria RESIDENCIAL, mas com consumos muito elevados (acima de 50m³), indicando possível uso COMERCIAL clandestino.
-4. **Incongruência de Esgoto**: Ligações com taxa de esgoto ATIVA, porém com água INATIVA. Indica que o cliente está gerando efluentes provindos de fontes alternativas ou ligações irregulares de água, devendo ser cobrado pelo serviço.
+3. **Anomalia de Categoria**: Ligações com categoria RESIDENCIAL, mas com consumos elevadíssimos (acima de 50m³), indicando possível uso COMERCIAL clandestino.
+4. **Incongruência de Esgoto**: Ligações com taxa de esgoto ATIVA, porém com água INATIVA. Indica que o cliente está gerando efluentes provenientes de fontes alternativas (ou irregulares) de água, devendo ser tarifado adequadamente.
 
-## 🛠️ Tecnologias Utilizadas
-- **Linguagem**: Python
-- **Análise de Dados**: Pandas
-- **Dashboard e UI**: Streamlit
-- **Gráficos**: Plotly Express e Graph Objects
+## 💡 Metodologia de Cálculo de ROI e Payback
+Para garantir que as ações propostas sejam viáveis e tragam retorno rápido, as seguintes premissas operacionais foram modeladas (e podem ser simuladas dinamicamente no painel):
 
-## 💡 Premissas e Metodologia (Cálculo de ROI)
-Para priorizar as ações com o melhor *Payback*, as seguintes premissas foram adotadas (e podem ser simuladas no próprio dashboard):
-- **Custo de Troca de Hidrômetro**: Assumido em R$ 150,00 por ordem de serviço.
-- **Custo de Inspeção de Fraude**: Assumido em R$ 100,00 por deslocamento/fiscalização.
-- **Tarifa Média Estimada**: Calculada automaticamente pela relação (`VALOR_AGUA / VOLUME_FATURADO`) com base nos clientes válidos e pagantes.
-- **Consumo Saudável Estimado**: Para calcular o que foi "perdido" em irregularidades (como hidrômetros parados e esgoto sem água), estimou-se um consumo basal de 15m³.
+*   **Custo de Troca de Hidrômetro**: R$ 150,00 por ordem de serviço.
+*   **Custo de Inspeção de Fraude**: R$ 100,00 por deslocamento/fiscalização da equipe de campo.
+*   **Tarifa Média Estimada**: Calculada de forma dinâmica (`VALOR_AGUA / VOLUME_FATURADO`) com base na base de clientes pagantes.
+*   **Consumo Saudável Estimado**: Para calcular o volume financeiro "perdido" em irregularidades (como hidrômetros parados e incongruências de esgoto), estimou-se um consumo basal conservador de 15m³.
+
+## 🛠️ Stack Tecnológica
+*   **Linguagem & Lógica**: Python
+*   **Tratamento e Modelagem de Dados**: Pandas
+*   **Desenvolvimento da Interface (UI)**: Streamlit
+*   **Visualização de Dados**: Plotly Express e Graph Objects
 
 ## 🚀 Como Executar o Projeto Localmente
 
