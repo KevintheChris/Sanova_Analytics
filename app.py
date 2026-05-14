@@ -93,6 +93,19 @@ def load_data():
     # 4. Incongruência Esgoto (Esgoto Ativo, Água não Ativa)
     df['INCONGRUENCIA_ESGOTO'] = (df['SIT._LIG_ESGOTO'].str.upper() == 'ATIVA') & (df['SIT._LIG_AGUA'].str.upper() != 'ATIVA')
     
+    # 5. Idade do Hidrômetro (Mais de 5 anos -> 1825 dias)
+    from datetime import datetime
+    if 'DATA_INSTALACAO_HIDROMETRO' in df.columns:
+        df['DATA_INSTALACAO_HIDROMETRO'] = pd.to_datetime(df['DATA_INSTALACAO_HIDROMETRO'], errors='coerce')
+        idade_dias = (datetime.now() - df['DATA_INSTALACAO_HIDROMETRO']).dt.days
+        df['SUBMEDICAO_IDADE'] = idade_dias > (5 * 365)
+    else:
+        df['SUBMEDICAO_IDADE'] = False
+        
+    # 6. Queda Brusca de Consumo (Caiu > 50% em relacao a media historica)
+    df['MEDIA_HISTORICA'] = df[vol_cols].mean(axis=1)
+    df['QUEDA_BRUSCA_CONSUMO'] = (df['MEDIA_HISTORICA'] > 10) & (df['VOLUME_LIDO'] < (df['MEDIA_HISTORICA'] * 0.5))
+    
     # Calcular Tarifa Média Estimada (R$ / m³) para quem consumiu e pagou
     df_valid = df[(df['VOLUME_FATURADO'] > 0) & (df['VALOR_AGUA'] > 0)]
     tarifa_media = (df_valid['VALOR_AGUA'] / df_valid['VOLUME_FATURADO']).mean() if not df_valid.empty else 5.0
@@ -105,6 +118,8 @@ def load_data():
     df.loc[df['POSSIVEL_CLANDESTINA'], 'PERDA_ESTIMADA_R$'] = df.loc[df['POSSIVEL_CLANDESTINA'], 'VOLUME_LIDO'] * tarifa_media
     df.loc[df['ANOMALIA_CATEGORIA'], 'PERDA_ESTIMADA_R$'] = (df.loc[df['ANOMALIA_CATEGORIA'], 'VOLUME_LIDO'] * tarifa_media) * 0.50
     df.loc[df['INCONGRUENCIA_ESGOTO'], 'PERDA_ESTIMADA_R$'] = 15 * tarifa_media  # Considera-se consumo irregular não faturado
+    df.loc[df['SUBMEDICAO_IDADE'], 'PERDA_ESTIMADA_R$'] = 5 * tarifa_media
+    df.loc[df['QUEDA_BRUSCA_CONSUMO'], 'PERDA_ESTIMADA_R$'] = (df.loc[df['QUEDA_BRUSCA_CONSUMO'], 'MEDIA_HISTORICA'] - df.loc[df['QUEDA_BRUSCA_CONSUMO'], 'VOLUME_LIDO']) * tarifa_media
     
     return df, tarifa_media
 
@@ -228,18 +243,24 @@ with tab2:
     qtd_cland = df_filtered['POSSIVEL_CLANDESTINA'].sum()
     qtd_anom = df_filtered['ANOMALIA_CATEGORIA'].sum()
     qtd_esg = df_filtered['INCONGRUENCIA_ESGOTO'].sum()
+    qtd_idade = df_filtered['SUBMEDICAO_IDADE'].sum()
+    qtd_queda = df_filtered['QUEDA_BRUSCA_CONSUMO'].sum()
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     col1.metric("🛑 Hidrômetros Parados", f"{qtd_parados}", help="Ligações ativas que não registraram consumo.")
     col2.metric("⚠️ Clandestinas", f"{qtd_cland}", help="Ligações inativas/cortadas que registraram volume lido.")
     col3.metric("🏢 Anomalia Categoria", f"{qtd_anom}", help="Residências com consumo de grande porte (>50m³).")
+    
+    col4, col5, col6 = st.columns(3)
     col4.metric("🚽 Incongruência Esgoto", f"{qtd_esg}", help="Ligações com Esgoto ativo mas Água inativa.")
+    col5.metric("⏳ Submedição (Idade)", f"{qtd_idade}", help="Hidrômetros com mais de 5 anos de instalação.")
+    col6.metric("📉 Queda Brusca", f"{qtd_queda}", help="Consumo caiu >50% em relação à média de 12 meses.")
     
     st.divider()
     st.markdown("### Detalhamento das Ligações Críticas")
     
     tipo_anomalia = st.selectbox("Selecione a anomalia para visualizar:", 
-                                 ["Hidrômetros Parados", "Possíveis Clandestinas", "Anomalia de Categoria", "Incongruência Esgoto"])
+                                 ["Hidrômetros Parados", "Possíveis Clandestinas", "Anomalia de Categoria", "Incongruência Esgoto", "Submedição por Idade", "Queda Brusca de Consumo"])
     
     if tipo_anomalia == "Hidrômetros Parados":
         st.dataframe(df_filtered[df_filtered['HIDROMETRO_PARADO']][['MATRICULA', 'SIT._LIG_AGUA', 'CATEGORIA_PRINCIPAL', 'VOLUME_LIDO', 'VOLUME_FATURADO', 'VALOR_TOTAL', 'DATA_INSTALACAO_HIDROMETRO']], hide_index=True)
@@ -247,8 +268,12 @@ with tab2:
         st.dataframe(df_filtered[df_filtered['POSSIVEL_CLANDESTINA']][['MATRICULA', 'SIT._LIG_AGUA', 'VOLUME_LIDO', 'VOLUME_FATURADO', 'VALOR_TOTAL']], hide_index=True)
     elif tipo_anomalia == "Anomalia de Categoria":
         st.dataframe(df_filtered[df_filtered['ANOMALIA_CATEGORIA']][['MATRICULA', 'CATEGORIA_PRINCIPAL', 'VOLUME_LIDO', 'VALOR_TOTAL']], hide_index=True)
-    else:
+    elif tipo_anomalia == "Incongruência Esgoto":
         st.dataframe(df_filtered[df_filtered['INCONGRUENCIA_ESGOTO']][['MATRICULA', 'SIT._LIG_AGUA', 'SIT._LIG_ESGOTO', 'VOLUME_LIDO', 'VALOR_TOTAL']], hide_index=True)
+    elif tipo_anomalia == "Submedição por Idade":
+        st.dataframe(df_filtered[df_filtered['SUBMEDICAO_IDADE']][['MATRICULA', 'DATA_INSTALACAO_HIDROMETRO', 'VOLUME_LIDO', 'VOLUME_FATURADO', 'VALOR_TOTAL']], hide_index=True)
+    else:
+        st.dataframe(df_filtered[df_filtered['QUEDA_BRUSCA_CONSUMO']][['MATRICULA', 'MEDIA_HISTORICA', 'VOLUME_LIDO', 'VOLUME_FATURADO', 'VALOR_TOTAL']], hide_index=True)
 
 # ==========================================
 # TAB 3: RECUPERAÇÃO DE RECEITA
@@ -260,12 +285,14 @@ with tab3:
     st.success(f"📈 Potencial Total de Recuperação Mensal: **R$ {total_perda:,.2f}**")
     
     df_perdas = pd.DataFrame({
-        'Tipo de Anomalia': ['Hidrômetros Parados', 'Clandestinas', 'Atualização Cadastral', 'Incongruência Esgoto'],
+        'Tipo de Anomalia': ['Hidrômetros Parados', 'Clandestinas', 'Atualização Cadastral', 'Incongruência Esgoto', 'Submedição (Idade)', 'Queda Brusca'],
         'Perda Financeira (R$)': [
             df_filtered[df_filtered['HIDROMETRO_PARADO']]['PERDA_ESTIMADA_R$'].sum(),
             df_filtered[df_filtered['POSSIVEL_CLANDESTINA']]['PERDA_ESTIMADA_R$'].sum(),
             df_filtered[df_filtered['ANOMALIA_CATEGORIA']]['PERDA_ESTIMADA_R$'].sum(),
-            df_filtered[df_filtered['INCONGRUENCIA_ESGOTO']]['PERDA_ESTIMADA_R$'].sum()
+            df_filtered[df_filtered['INCONGRUENCIA_ESGOTO']]['PERDA_ESTIMADA_R$'].sum(),
+            df_filtered[df_filtered['SUBMEDICAO_IDADE']]['PERDA_ESTIMADA_R$'].sum(),
+            df_filtered[df_filtered['QUEDA_BRUSCA_CONSUMO']]['PERDA_ESTIMADA_R$'].sum()
         ]
     })
     
@@ -284,6 +311,8 @@ with tab3:
         - **Clandestinas**: Multiplicação do volume real lido pela tarifa média, considerando que a ligação deveria estar pagando.
         - **Atualização Cadastral**: Estima-se um ganho de 50% de ágio na tarifa caso uma ligação residencial de altíssimo consumo seja reclassificada.
         - **Incongruência Esgoto**: Estima-se a cobrança correspondente a um consumo de 15m³ que provavelmente está sendo desviado e descartado na rede.
+        - **Submedição (Idade)**: Estima-se uma perda de 5m³ por ligação devido à perda de sensibilidade do hidrômetro antigo.
+        - **Queda Brusca**: Estima-se a recuperação da diferença entre o consumo médio histórico do cliente e o consumo atipicamente baixo do mês atual.
         """)
 
 # ==========================================
@@ -326,6 +355,20 @@ with tab4:
         custo = qtd_esg * custo_inspecao
         payback = custo / ganho if ganho > 0 else 0
         acoes.append({"Ação": "Vistoria de Incongruência Esgoto", "Qtd OS": qtd_esg, "Custo Total (R$)": custo, "Retorno Mensal (R$)": ganho, "Payback (Meses)": payback})
+        
+    # Ação 5: Troca Preventiva por Idade
+    if qtd_idade > 0:
+        ganho = df_filtered[df_filtered['SUBMEDICAO_IDADE']]['PERDA_ESTIMADA_R$'].sum()
+        custo = qtd_idade * custo_troca_hidrometro
+        payback = custo / ganho if ganho > 0 else 0
+        acoes.append({"Ação": "Substituição Preventiva (Idade > 5 anos)", "Qtd OS": qtd_idade, "Custo Total (R$)": custo, "Retorno Mensal (R$)": ganho, "Payback (Meses)": payback})
+
+    # Ação 6: Inspeção de Queda Brusca
+    if qtd_queda > 0:
+        ganho = df_filtered[df_filtered['QUEDA_BRUSCA_CONSUMO']]['PERDA_ESTIMADA_R$'].sum()
+        custo = qtd_queda * custo_inspecao
+        payback = custo / ganho if ganho > 0 else 0
+        acoes.append({"Ação": "Inspeção por Queda Brusca de Consumo", "Qtd OS": qtd_queda, "Custo Total (R$)": custo, "Retorno Mensal (R$)": ganho, "Payback (Meses)": payback})
         
     df_acoes = pd.DataFrame(acoes)
     
@@ -380,3 +423,4 @@ with tab5:
         fig_cap = px.bar(df_filtered['CAPACIDADE_HIDROMETRO'].value_counts().reset_index(), x='CAPACIDADE_HIDROMETRO', y='count', text_auto=True, color_discrete_sequence=['#023E8A'])
         fig_cap.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', xaxis_title="Capacidade", yaxis_title="Quantidade")
         st.plotly_chart(fig_cap, use_container_width=True)
+        
