@@ -4,7 +4,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Pandas](https://img.shields.io/badge/Pandas-2.x-150458.svg?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 
-**🔗 [Acesse o Dashboard Interativo Aqui](https://seu-app-saneamento.streamlit.app)** 
+**🔗 [Acesse o Dashboard Interativo Aqui](https://sanovaanalytics-gfmappnrr9.streamlit.app/)** 
 
 ---
 
